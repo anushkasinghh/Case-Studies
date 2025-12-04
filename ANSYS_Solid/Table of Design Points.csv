@@ -1,0 +1,11 @@
+﻿# 
+# 12/04/2025 18:59:35
+# The parameters defined in the project are:
+# ,P4 - Mesh Element Size [m],P2 - Total Deformation Maximum [m],P3 - Equivalent Stress Maximum [Pa]
+# 
+# The following header line defines the name of the columns by reference to the parameters.
+Name,P4,P2,P3
+DP 0,0.02,5.7386853038258949E-08,73714.650974766671
+DP 1,0.015,5.6484288407284467E-08,68633.159680961908
+DP 3,0.01,5.7534828213530882E-08,96136.560053715162
+DP 4,0.008,5.7941731575746969E-08,96324.780189661527

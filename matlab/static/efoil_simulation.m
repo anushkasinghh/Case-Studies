@@ -9,18 +9,16 @@ YOUNGS_MODULUS = 100e9; % (Pa)
 MASS_DENSITY = 1800;    % (kg/m^3)
 
 % current simulation values
-TIP_FORCE = 100000; % force applied to the tip of the wing (N)
-CONV_PTS_N = 1000;
+TIP_FORCE = 100; % force applied to the tip of the wing (N)
 
 
 % __main__
 do_sub_visualization = false;
 do_print_values = false;
 do_main_visualization = true;
-mesh_grid = [0.2 0.15 0.1 0.07 0.05 0.03 0.02 0.015 0.01 0.007 0.005];
-mesh_labels = ["0.2" "0.15" "0.1" "0.07" "0.05" "0.03" "0.02" "0.015" "0.01" "0.007" "0.005"];
-displacements = [];
-vm_stresses = [];
+mesh_grid = [0.2 0.15 0.1 0.08 0.06 0.04 0.03 0.02 0.015 0.01 0.007];
+mesh_labels = ["0.2" "0.15" "0.1" "0.08" "0.06" "0.04" "0.03" "0.02" "0.015" "0.01" "0.007"];
+solutions = [];
 for mesh_size = mesh_grid
     fprintf('Mesh size: %.4f\n', mesh_size);
     model = CreatePDEModel(STL_FILENAME, POISSONS_RATIO, YOUNGS_MODULUS, MASS_DENSITY, do_sub_visualization);
@@ -29,12 +27,11 @@ for mesh_size = mesh_grid
     
     fprintf('Solving linear elasticity equation\n');
     solution = solve(model);
-    [cur_displacements, cur_vm_stresses] = VizualizeSolution(model, solution, WING_SPAN, mesh_size, CONV_PTS_N, CHORD_LEN, WATER_LEVEL, do_print_values, false);
-    displacements = [displacements; cur_displacements(1, :)];
-    vm_stresses = [vm_stresses; cur_vm_stresses(1, :)];
+    VizualizeSolution(model, solution, mesh_size, do_print_values, false);
+    solutions = [solutions; solution];
 end
 
-VisualizeConvergenceGrid(mesh_labels, displacements, vm_stresses);
+VisualizeConvergenceGrid(mesh_labels, solutions);
 
 % default stress graph
 fprintf('Default stress graph: Mesh size: %.4f\n', DEFAULT_MESH_ELEMENT_SIZE);
@@ -44,7 +41,7 @@ model = SetConditions(model, WING_SPAN, TIP_FORCE);
 
 fprintf('Solving linear elasticity equation\n');
 solution = solve(model);
-VizualizeSolution(model, solution, WING_SPAN, DEFAULT_MESH_ELEMENT_SIZE, CONV_PTS_N, CHORD_LEN, WATER_LEVEL, do_print_values, true);
+VizualizeSolution(model, solution, DEFAULT_MESH_ELEMENT_SIZE, do_print_values, true);
 
 % end __main__
 
@@ -99,7 +96,7 @@ function model = SetConditions(model, wing_span, tip_force)
 end
 
 
-function [picked_displacements, picked_vm_stress] = VizualizeSolution(model, solution, wing_span, mesh_size, pick_pts_n, pick_x_coord, pick_z_coord, do_print_values, do_visualization)
+function VizualizeSolution(model, solution, mesh_size, do_print_values, do_visualization)
     if do_visualization
         figure('Name', sprintf('Mesh and deformed shape: mesh_size - %.4f', mesh_size));
     
@@ -108,11 +105,10 @@ function [picked_displacements, picked_vm_stress] = VizualizeSolution(model, sol
         title('Undeformed mesh'); axis equal
     end
 
-    d = solution.Displacement;
-    d_len = sqrt(d.ux.^2 + d.uy.^2 + d.uz.^2);
-    scale_factor = 100; % visualization scale
+    displacement = solution.Displacement;
+    d_len = sqrt(displacement.ux.^2 + displacement.uy.^2 + displacement.uz.^2);
     if do_print_values
-        fprintf('Displacement: [%f, %f, %f], len = %f\n', d.ux, d.uy, d.uz, d_len);
+        fprintf('Displacement: [%f, %f, %f], len = %f\n', displacement.ux, displacement.uy, displacement.uz, d_len);
     end
 
     if do_visualization
@@ -134,28 +130,43 @@ function [picked_displacements, picked_vm_stress] = VizualizeSolution(model, sol
         pdeplot3D(model.Geometry.Mesh, 'ColorMapData', vm_stress);
         title('Approx. von Mises stress'); axis equal
         colorbar
-    end
-
-    picked_displacements = zeros(pick_pts_n);
-    picked_vm_stress = zeros(pick_pts_n);
-    y_vals = linspace(0, wing_span, pick_pts_n);
-    for i = 1:pick_pts_n
-        v = [pick_x_coord; y_vals(i); pick_z_coord];
-        node_id = findNodes(solution.Mesh, 'nearest', v);
-        picked_displacements(1, i) = d_len(node_id, 1);
-        picked_vm_stress(1, i) = vm_stress(node_id, 1);
-    end
+    end    
 end
 
 
-function VisualizeConvergenceGrid(x_labels, displacements, vm_stresses)
+function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf)  % coarse, fine grids
+    fmesh_nodes = sf.Mesh.Nodes.';
+    n = size(fmesh_nodes, 1);
+    by_displacement = 0;
+    by_vm_stress = 0;
+    for i = 1:n
+        cnode_id = findNodes(sc.Mesh, 'nearest', fmesh_nodes(i, :).');
+
+        % add displacement
+        cd = sc.Displacement;
+        fd = sf.Displacement;
+        by_displacement = by_displacement + (cd.ux(cnode_id) - fd.ux(i)).^2 + (cd.uy(cnode_id) - fd.uy(i)).^2 + (cd.uz(cnode_id) - fd.uz(i)).^2; 
+
+        % add stress
+        cvms = sc.VonMisesStress(cnode_id);
+        fvms = sf.VonMisesStress(i);
+        by_vm_stress = by_vm_stress + (cvms - fvms).^2;
+    end
+
+    by_displacement = sqrt(by_displacement / n);
+    by_vm_stress = sqrt(by_vm_stress / n );
+end
+
+
+function VisualizeConvergenceGrid(x_labels, solutions)
     x_labels_t = x_labels.';
-    n = size(displacements, 1);
+    n = size(solutions, 1);
     displacement_diffs = [];
     vm_stress_diffs = [];
     for i = 1:n-1
-        displacement_diffs = [displacement_diffs; norm(displacements(i) - displacements(n), 2)];
-        vm_stress_diffs = [vm_stress_diffs; norm(vm_stresses(i) - vm_stresses(n), 2)];
+        [d, s] = GetDiffValues(solutions(i), solutions(i+1));
+        displacement_diffs = [displacement_diffs; d];
+        vm_stress_diffs = [vm_stress_diffs; s];
     end
 
     figure('Name', sprintf('Mesh convergence chart'));
@@ -165,12 +176,12 @@ function VisualizeConvergenceGrid(x_labels, displacements, vm_stresses)
     xticks(1:n-1);
     xticklabels(x_labels_t(1:n-1));
     title('Convergence by displacement');
-    ylabel('L2-norm diff by displacement');
+    ylabel('Average L2-norm difference by displacement');
 
     p2 = subplot(1, 2, 2);
     plot(1:n-1, vm_stress_diffs.', '-o');
     xticks(1:n-1);
     xticklabels(x_labels_t(1:n-1));
     title('Convergence by von Mises stress');
-    ylabel('L2-norm diff by von Mises stress');
+    ylabel('Average L2-norm difference by von Mises stress');
 end

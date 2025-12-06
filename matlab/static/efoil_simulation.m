@@ -1,23 +1,25 @@
 common_var;  % import common_var
 
+EPS = 1e-9;
+
 % mesh params
 DEFAULT_MESH_ELEMENT_SIZE = 0.05;  % mesh size (m)
 
-% material
+% material carbon fiber
 POISSONS_RATIO = 0.27;
 YOUNGS_MODULUS = 100e9; % (Pa)
 MASS_DENSITY = 1800;    % (kg/m^3)
 
 % current simulation values
-TIP_FORCE = 100; % force applied to the tip of the wing (N)
+TIP_FORCE = 1000; % force applied to the tip of the wing (N)
 
 
 % __main__
 do_sub_visualization = false;
 do_print_values = false;
 do_main_visualization = true;
-mesh_grid = [0.2 0.15 0.1 0.08 0.06 0.04 0.03 0.02 0.015 0.01 0.007];
-mesh_labels = ["0.2" "0.15" "0.1" "0.08" "0.06" "0.04" "0.03" "0.02" "0.015" "0.01" "0.007"];
+mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.007];
+mesh_labels = ["0.1" "0.07" "0.05" "0.04" "0.03" "0.02" "0.015" "0.01" "0.0085" "0.0075"];
 solutions = [];
 for mesh_size = mesh_grid
     fprintf('Mesh size: %.4f\n', mesh_size);
@@ -31,7 +33,7 @@ for mesh_size = mesh_grid
     solutions = [solutions; solution];
 end
 
-VisualizeConvergenceGrid(mesh_labels, solutions);
+VisualizeConvergenceGrid(mesh_labels, solutions, EPS);
 
 % default stress graph
 fprintf('Default stress graph: Mesh size: %.4f\n', DEFAULT_MESH_ELEMENT_SIZE);
@@ -84,6 +86,9 @@ function model = SetConditions(model, wing_span, tip_force)
     fprintf('Applying structural constraint to faces: %s\n', mat2str(root_face_ids));
     model.FaceBC(root_face_ids) = faceBC(Constraint='fixed');
  
+    % remove gravity
+    model.FaceLoad = faceLoad(Gravity=[0 0 0]);
+
     % apply force to the tip of the wing
     y_max = max(vertex_coords(:, 2));
     tip_face_ids = find(abs(face_centers(:, 2) - y_max) < 5e-3 * wing_span);
@@ -134,54 +139,68 @@ function VizualizeSolution(model, solution, mesh_size, do_print_values, do_visua
 end
 
 
-function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf)  % coarse, fine grids
-    fmesh_nodes = sf.Mesh.Nodes.';
-    n = size(fmesh_nodes, 1);
+function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf, eps)  % coarse, fine grids
+    cmesh_nodes = sc.Mesh.Nodes.';
+    n = size(cmesh_nodes, 1);
     by_displacement = 0;
     by_vm_stress = 0;
-    for i = 1:n
-        cnode_id = findNodes(sc.Mesh, 'nearest', fmesh_nodes(i, :).');
+    for cnode_id = 1:n
+        i = findNodes(sf.Mesh, 'nearest', cmesh_nodes(cnode_id, :).');
 
         % add displacement
         cd = sc.Displacement;
         fd = sf.Displacement;
-        by_displacement = by_displacement + (cd.ux(cnode_id) - fd.ux(i)).^2 + (cd.uy(cnode_id) - fd.uy(i)).^2 + (cd.uz(cnode_id) - fd.uz(i)).^2; 
+        mg = (cd.Magnitude(cnode_id) + fd.Magnitude(i)) / 2;
+        if abs(mg) > eps
+            sqdx = (cd.ux(cnode_id) - fd.ux(i)).^2;
+            sqdy = (cd.uy(cnode_id) - fd.uy(i)).^2;
+            sqdz = (cd.uz(cnode_id) - fd.uz(i)).^2;
+            by_displacement = by_displacement + sqrt(sqdx + sqdy + sqdz) / mg;
+        end
 
         % add stress
         cvms = sc.VonMisesStress(cnode_id);
         fvms = sf.VonMisesStress(i);
-        by_vm_stress = by_vm_stress + (cvms - fvms).^2;
+        st = (abs(cvms) + abs(fvms)) / 2;
+        if abs(st) > eps
+            by_vm_stress = by_vm_stress + abs(cvms - fvms) / st;
+        end
     end
 
-    by_displacement = sqrt(by_displacement / n);
-    by_vm_stress = sqrt(by_vm_stress / n );
+    by_displacement = by_displacement / n;
+    by_vm_stress = by_vm_stress / n;
 end
 
 
-function VisualizeConvergenceGrid(x_labels, solutions)
+function VisualizeConvergenceGrid(x_labels, solutions, eps)
     x_labels_t = x_labels.';
     n = size(solutions, 1);
     displacement_diffs = [];
     vm_stress_diffs = [];
     for i = 1:n-1
-        [d, s] = GetDiffValues(solutions(i), solutions(i+1));
+        [d, s] = GetDiffValues(solutions(i), solutions(i+1), eps);
         displacement_diffs = [displacement_diffs; d];
         vm_stress_diffs = [vm_stress_diffs; s];
     end
+    displacement_diffs = [displacement_diffs; displacement_diffs(n-1)];
+    vm_stress_diffs = [vm_stress_diffs; vm_stress_diffs(n-1)];
+
+    fprintf('Displacements: %s\n', mat2str(displacement_diffs));
+    fprintf('VM Stress: %s\n', mat2str(vm_stress_diffs));
 
     figure('Name', sprintf('Mesh convergence chart'));
 
     p1 = subplot(1, 2, 1);
-    plot(1:n-1, displacement_diffs.', '-o');
-    xticks(1:n-1);
-    xticklabels(x_labels_t(1:n-1));
+    plot(1:n, displacement_diffs.', '-o');
+    xticks(1:n);
+    xticklabels(x_labels_t(1:n));
     title('Convergence by displacement');
-    ylabel('Average L2-norm difference by displacement');
+    ylabel('Average L1-norm difference by displacement');
 
     p2 = subplot(1, 2, 2);
-    plot(1:n-1, vm_stress_diffs.', '-o');
-    xticks(1:n-1);
-    xticklabels(x_labels_t(1:n-1));
+    plot(1:n, vm_stress_diffs.', '-o');
+    xticks(1:n);
+    xticklabels(x_labels_t(1:n));
     title('Convergence by von Mises stress');
-    ylabel('Average L2-norm difference by von Mises stress');
+    ylabel('Average L1-norm difference by von Mises stress');
 end

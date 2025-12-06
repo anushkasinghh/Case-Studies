@@ -1,0 +1,26 @@
+DEFAULT_MESH_ELEMENT_SIZE = 0.05;  % mesh size
+
+% material carbon fiber
+POISSONS_RATIO = 0.27;
+YOUNGS_MODULUS = 100e9; % (Pa)
+MASS_DENSITY = 1800;    % (kg/m^3)
+
+mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.007];
+
+% efoil params
+NACA0012 = '0012';
+N_CHORD = 40;              % points along airfoil surface (per section)
+CHORD_LEN = 0.3;           % chord length (m)
+WIDTH_SECTIONS = 25;       % number of spanwise sections
+WING_SPAN = 1.0;           % wing span by y-coord from 0 to WING_SPAN
+
+% efoil position
+INIT_ROTATION_ANGLE = 0;   % initial rotation of the overall wing
+ROTATE_ANGLE = 0;          % rotation around the axis Oy-plane
+WATER_LEVEL = -1.0;              % z coordinate of free surface (m)
+ROOT_POS = [0, 0, WATER_LEVEL];  % root position: x - by length, y - by width, z - centerline height
+
+% force applied
+direction = {1, 0, 0};
+position = {0.15, 1, -1};
+TIP_FORCE = 1000; % force applied to the tip of the wing (N)

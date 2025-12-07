@@ -11,14 +11,14 @@ YOUNGS_MODULUS = 100e9; % (Pa)
 MASS_DENSITY = 1800;    % (kg/m^3)
 
 % current simulation values
-TIP_FORCE = 1000; % force applied to the tip of the wing (N)
+TIP_FORCE = 100; % force applied to the tip of the wing (N)
 
 
 % __main__
 do_sub_visualization = false;
 do_print_values = false;
 do_main_visualization = true;
-mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.007];
+mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.0075];
 mesh_labels = ["0.1" "0.07" "0.05" "0.04" "0.03" "0.02" "0.015" "0.01" "0.0085" "0.0075"];
 solutions = [];
 for mesh_size = mesh_grid
@@ -105,7 +105,7 @@ function VizualizeSolution(model, solution, mesh_size, do_print_values, do_visua
     if do_visualization
         figure('Name', sprintf('Mesh and deformed shape: mesh_size - %.4f', mesh_size));
     
-        p1 = subplot(1, 3, 1);
+        % p1 = subplot(1, 3, 1);
         pdeplot3D(model.Geometry.Mesh)
         title('Undeformed mesh'); axis equal
     end
@@ -117,7 +117,8 @@ function VizualizeSolution(model, solution, mesh_size, do_print_values, do_visua
     end
 
     if do_visualization
-        p2 = subplot(1, 3, 2);
+        % p2 = subplot(1, 3, 2);
+        figure('Name', sprintf('Mesh and deformed shape: mesh_size - %.4f', mesh_size));
         pdeplot3D(model.Geometry.Mesh, 'ColorMapData', d_len);
         title('Displacement'); axis equal
         colorbar
@@ -131,7 +132,8 @@ function VizualizeSolution(model, solution, mesh_size, do_print_values, do_visua
     % end
 
     if do_visualization
-        p3 = subplot(1, 3, 3);
+        % p3 = subplot(1, 3, 3);
+        figure('Name', sprintf('Mesh and deformed shape: mesh_size - %.4f', mesh_size));
         pdeplot3D(model.Geometry.Mesh, 'ColorMapData', vm_stress);
         title('Approx. von Mises stress'); axis equal
         colorbar
@@ -150,7 +152,7 @@ function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf, eps)  % coarse,
         % add displacement
         cd = sc.Displacement;
         fd = sf.Displacement;
-        mg = (cd.Magnitude(cnode_id) + fd.Magnitude(i)) / 2;
+        mg = max(cd.Magnitude(cnode_id), fd.Magnitude(i));
         if abs(mg) > eps
             sqdx = (cd.ux(cnode_id) - fd.ux(i)).^2;
             sqdy = (cd.uy(cnode_id) - fd.uy(i)).^2;
@@ -161,7 +163,7 @@ function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf, eps)  % coarse,
         % add stress
         cvms = sc.VonMisesStress(cnode_id);
         fvms = sf.VonMisesStress(i);
-        st = (abs(cvms) + abs(fvms)) / 2;
+        st = max(abs(cvms), abs(fvms));
         if abs(st) > eps
             by_vm_stress = by_vm_stress + abs(cvms - fvms) / st;
         end

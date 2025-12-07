@@ -23,4 +23,4 @@ ROOT_POS = [0, 0, WATER_LEVEL];  % root position: x - by length, y - by width, z
 % force applied
 direction = {1, 0, 0};
 position = {0.15, 1, -1};
-TIP_FORCE = 1000; % force applied to the tip of the wing (N)
+TIP_FORCE = 100; % force applied to the tip of the wing (N)

@@ -3,10 +3,10 @@ WING_WITH_MAST_FILENAME = "wing_with_mast_not_merged.stl";
 
 % efoil params
 NACA0012 = '0012';
-N_CHORD = 40;                       % points along airfoil surface (per section)
-CHORD_LEN = 0.15;                    % chord length (m)
+N_CHORD = 80;                       % points along airfoil surface (per section)
+CHORD_LEN = 0.15;                   % chord length (m)
 WIDTH_SECTIONS = 50;                % number of spanwise sections
-WING_SPAN = 0.4;                     % wing span by y-coord from 0 to WING_SPAN
+WING_SPAN = 0.4;                    % wing span by y-coord from 0 to WING_SPAN
 REAR_WING_SPAN = WING_SPAN / 2;
 REAR_WING_CHORD_LEN = CHORD_LEN / 2;
 CHORD_TO_MAST_RATIO = 0.5;

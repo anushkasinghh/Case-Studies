@@ -48,20 +48,11 @@ function results_table = GetResultsTable(solution)
     x = solution.Mesh.Nodes(1, :).';
     y = solution.Mesh.Nodes(2, :).';
     z = solution.Mesh.Nodes(3, :).';
-    sxx = solution.Stress.sxx;
-    syy = solution.Stress.syy;
-    szz = solution.Stress.szz;
-    sxy = solution.Stress.sxy;
-    syz = solution.Stress.syz;
-    sxz = solution.Stress.sxz;
     u_x = solution.Displacement.ux;
     u_y = solution.Displacement.uy;
     u_z = solution.Displacement.uz;
-    columns = {'X', 'Y', 'Z', 'sxx', 'syy', 'szz', 'sxy', 'syz', 'sxz', 'u_x', 'u_y', 'u_z'};
-    results_table = table(...
-        x, y, z, sxx, syy, szz, sxy, syz, sxz, u_x, u_y, u_z, 'VariableNames', columns);
-    % columns = {'X', 'Y', 'Z', 'u_x', 'u_y', 'u_z'};
-    % results_table = table(x, y, z, u_x, u_y, u_z, 'VariableNames', columns);
+    columns = {'X', 'Y', 'Z', 'u_x', 'u_y', 'u_z'};
+    results_table = table(x, y, z, u_x, u_y, u_z, 'VariableNames', columns);
 end
 
 

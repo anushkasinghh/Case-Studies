@@ -4,7 +4,7 @@ common_var;  % import common_var
 DEFAULT_MESH_ELEMENT_SIZE = 0.05;  % mesh size (m)
 
 % current simulation values
-TIP_FORCE = [10000 0 0];  % force applied to the tip of the wing (N)
+TIP_FORCE = [100; 0; 0];  % force applied to the tip of the wing (N)
 wing_span = 1.0;          % 1m
 chord_len = 0.3;          % 0.3m
 

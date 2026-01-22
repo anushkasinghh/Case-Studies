@@ -1,11 +1,11 @@
 DEFAULT_STL_FILENAME = "default_wing.stl";
-WING_WITH_MAST_FILENAME = "wing_with_mast.stl";
+WING_WITH_MAST_FILENAME = "wing_with_mast_not_merged.stl";
 
 % efoil params
 NACA0012 = '0012';
-N_CHORD = 40;                        % points along airfoil surface (per section)
+N_CHORD = 40;                       % points along airfoil surface (per section)
 CHORD_LEN = 0.15;                    % chord length (m)
-WIDTH_SECTIONS = 50;                 % number of spanwise sections
+WIDTH_SECTIONS = 50;                % number of spanwise sections
 WING_SPAN = 0.4;                     % wing span by y-coord from 0 to WING_SPAN
 REAR_WING_SPAN = WING_SPAN / 2;
 REAR_WING_CHORD_LEN = CHORD_LEN / 2;
@@ -24,5 +24,5 @@ REAR_WING_ROOT_POS = [(ROOT_POS(1) + ROD_LEN - REAR_WING_CHORD_LEN) ROOT_POS(2) 
 
 % material carbon fiber
 POISSONS_RATIO = 0.27;
-YOUNGS_MODULUS = 100e9; % (Pa)
+YOUNGS_MODULUS = 1e11; % (Pa)
 MASS_DENSITY = 1800;    % (kg/m^3)

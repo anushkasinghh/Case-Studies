@@ -3,8 +3,8 @@ common_var;  % import common_var
 EPS = 1e-9;
 
 % current simulation values
-TIP_FORCE = [100 0 0];    % force applied to the tip of the wing (N)
-wing_span = 1.0;          % 1m
+TIP_FORCE = [100; 0; 0];    % force applied to the tip of the wing (N)
+wing_span = 1.0;           % 1m
 
 
 % __main__
@@ -12,11 +12,13 @@ do_sub_visualization = false;
 do_print_values = false;
 mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.0075];
 mesh_labels = ["0.1" "0.07" "0.05" "0.04" "0.03" "0.02" "0.015" "0.01" "0.0085" "0.0075"];
+geometric_order = "linear";
 solutions = [];
+
 for mesh_size = mesh_grid
-    fprintf('Mesh size: %.4f\n', mesh_size);
+    fprintf('Mesh size: %.4f; Geometric order: %s\n', mesh_size, geometric_order);
     model = efoil_simulation.CreatePDEModel(DEFAULT_STL_FILENAME, POISSONS_RATIO, YOUNGS_MODULUS, MASS_DENSITY, do_sub_visualization);
-    model = efoil_simulation.GenerateDefaultMesh(model, mesh_size, do_sub_visualization);
+    model = efoil_simulation.GenerateMesh(model, mesh_size, 1.0, geometric_order, do_sub_visualization);
     model = efoil_simulation.SetDefaultTestConditions(model, wing_span, TIP_FORCE);
    
     fprintf('Solving linear elasticity equation\n');
@@ -41,7 +43,7 @@ function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf, eps)  % coarse,
         % add displacement
         cd = sc.Displacement;
         fd = sf.Displacement;
-        mg = max(cd.Magnitude(cnode_id), fd.Magnitude(i));
+        mg = (cd.Magnitude(cnode_id) + fd.Magnitude(i)) / 2;
         if abs(mg) > eps
             sqdx = (cd.ux(cnode_id) - fd.ux(i)).^2;
             sqdy = (cd.uy(cnode_id) - fd.uy(i)).^2;
@@ -52,7 +54,7 @@ function [by_displacement, by_vm_stress] = GetDiffValues(sc, sf, eps)  % coarse,
         % add stress
         cvms = sc.VonMisesStress(cnode_id);
         fvms = sf.VonMisesStress(i);
-        st = max(abs(cvms), abs(fvms));
+        st = abs(cvms) + abs(fvms);
         if abs(st) > eps
             by_vm_stress = by_vm_stress + abs(cvms - fvms) / st;
         end

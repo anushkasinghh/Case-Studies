@@ -48,7 +48,7 @@ classdef efoil_simulation
             end
         
             % Compute von Mises stress and plot
-            vm_stress = solution.VonMisesStress; % sqrt(s.sxx.^2 - s.sxx.*s.syy + s.syy.^2 + 3 * s.sxy.^2);
+            vm_stress = solution.VonMisesStress;
         
             if do_visualization
                 figure('Name', sprintf('Mesh and deformed shape: mesh_size - %.4f', mesh_size));
@@ -76,14 +76,51 @@ classdef efoil_simulation
         end
 
 
+        function [x, y] = GetConvexHull(x_init, y_init)
+            K = convhull(x_init, y_init);
+            x = x_init(K);
+            y = y_init(K);
+        end
+
+        function face_area = GetFaceAreaXZ(model, face_id)
+            vertex_coords = model.Geometry.Mesh.Nodes.';
+            face_vertex_ids = findNodes(model.Geometry.Mesh, 'region', 'Face', face_id);
+            x_coord = vertex_coords(face_vertex_ids, 1);
+            z_coord = vertex_coords(face_vertex_ids, 3);
+            [x_coord, z_coord] = efoil_simulation.GetConvexHull(x_coord, z_coord);
+            x_center = mean(x_coord);
+            z_center = mean(z_coord);
+            x_coord = x_coord - x_center;
+            z_coord = z_coord - z_center;
+            atans = atan2(z_coord, x_coord);
+            n = size(atans, 1);
+            for i = 1:n
+                if atans(i) < 0
+                    atans(i) = atans(i) + 2 * pi;
+                end
+            end
+            combined = [atans x_coord z_coord];
+            combined = sortrows(combined);
+            v = [combined(:, 2) combined(:, 3) zeros(n, 1)];
+
+            face_area = 0;
+            for i = 1:n
+                j = mod(i, n) + 1;
+                face_area = face_area + 0.5 * norm(cross(v(i, :), v(j, :)));
+            end
+        end
+
+
         function model = ApplyTipForce(model, wing_span, tip_force)
             [~, face_centers] = efoil_simulation.GetVertexCoordAndFaceCenters(model);
 
             % apply force to the tip of the wing
             y_max = max(face_centers(:, 2));
             tip_face_ids = find(abs(face_centers(:, 2) - y_max) < 5e-3 * wing_span);
-            fprintf('Applying forces to the faces: %s\n', mat2str(tip_face_ids));
-            model.FaceLoad(tip_face_ids) = faceLoad(SurfaceTraction=tip_force);
+            fprintf('Applying forces to the faces: %s; %s\n', mat2str(tip_face_ids), mat2str(face_centers(tip_face_ids, :)));
+            
+            face_area = efoil_simulation.GetFaceAreaXZ(model, tip_face_ids(1));
+            model.FaceLoad(tip_face_ids(1)) = faceLoad("SurfaceTraction", tip_force / face_area);
         end
 
 
@@ -95,10 +132,10 @@ classdef efoil_simulation
             root_face_ids = find(abs(face_centers(:, 2) - y_min) < 5e-3 * wing_span);
             fprintf('Applying structural constraint to faces: %s\n', mat2str(root_face_ids));
             model.FaceBC(root_face_ids) = faceBC(Constraint='fixed');
-         
-            % remove gravity
-            model.FaceLoad = faceLoad(Gravity=[0 0 0]);
         
+            % add gravity
+            model.FaceLoad = faceLoad(Gravity=[0; 0; -9.81]);
+
             % apply force to the tip of the wing
             model = efoil_simulation.ApplyTipForce(model, wing_span, tip_force);
         end
@@ -112,10 +149,10 @@ classdef efoil_simulation
             root_face_ids = find(abs(face_centers(:, 3) - z_max) < 5e-3 * wing_span);
             fprintf('Applying structural constraint to faces: %s\n', mat2str(root_face_ids));
             model.FaceBC(root_face_ids) = faceBC(Constraint='fixed');
-         
-            % remove gravity
-            model.FaceLoad = faceLoad(Gravity=[0 0 0]);
         
+            % add gravity
+            model.FaceLoad = faceLoad(Gravity=[0; 0; -9.81]);
+
             % apply force to the tip of the wing
             model = efoil_simulation.ApplyTipForce(model, wing_span, tip_force);
         end

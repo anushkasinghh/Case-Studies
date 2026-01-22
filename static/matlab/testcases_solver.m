@@ -1,6 +1,6 @@
-common_var;             % import common_var
+common_var;              % import common_var
 
-TIP_FORCE = [1000000 0 0];  % force applied to the tip of the wing (N)
+TIP_FORCE = [100; 0; 0];   % force applied to the tip of the wing (N/)
 root_pos = [0, 0, -1.0]; % 1m under water
 
 % __main__
@@ -14,8 +14,8 @@ do_visualization = false;
 hmin_ratio = 1.0;            % not adaptive meshing
 geometric_order = 'linear';  % mesh gen with linear geom order
 
-mesh_grid = [0.02 0.015 0.01 0.009 0.007];
-mesh_labels = ["0.02" "0.015" "0.01" "0.009" "0.007"];
+mesh_grid = [0.014 0.013 0.0083 0.007 0.0058 0.0051 0.004];
+mesh_labels = ["0.02" "0.015" "0.01" "0.007" "0.006" "0.005" "0.004"]; % LABELS FROM ANSYS
 for naca_shape = naca_shapes
     % gen shape
     [vertices, faces] = naca_4digits_gen.GetWingVerticesAndFaces(naca_shape, N_CHORD, CHORD_LEN, @GetDefaultXRoot, WING_SPAN, WIDTH_SECTIONS, INIT_ROTATION_ANGLE, ROTATE_ANGLE, root_pos, false, 0);
@@ -27,7 +27,7 @@ for naca_shape = naca_shapes
     for i = 1:size(mesh_grid, 2);
         mesh_label = mesh_labels(i);
         mesh_size = mesh_grid(i);
-        fprintf('Mesh size: %.4f\n', mesh_size);
+        fprintf('Mesh size: %s\n', mesh_label);
         model = efoil_simulation.CreatePDEModel(stl_filename, POISSONS_RATIO, YOUNGS_MODULUS, MASS_DENSITY, do_sub_visualization);
         model = efoil_simulation.GenerateMesh(...
             model, mesh_size, hmin_ratio, geometric_order, do_visualization);
@@ -48,13 +48,20 @@ function results_table = GetResultsTable(solution)
     x = solution.Mesh.Nodes(1, :).';
     y = solution.Mesh.Nodes(2, :).';
     z = solution.Mesh.Nodes(3, :).';
-    sigma_x = solution.Stress.sxx;
-    sigma_y = solution.Stress.syy;
-    sigma_z = solution.Stress.szz;
-    u = solution.Displacement.Magnitude;
-    % eps ??
-    columns = {'X', 'Y', 'Z', 'sigma_x', 'sigma_y', 'sigma_z', 'u'};
-    results_table = table(x, y, z, sigma_x, sigma_y, sigma_z, u, 'VariableNames', columns);
+    sxx = solution.Stress.sxx;
+    syy = solution.Stress.syy;
+    szz = solution.Stress.szz;
+    sxy = solution.Stress.sxy;
+    syz = solution.Stress.syz;
+    sxz = solution.Stress.sxz;
+    u_x = solution.Displacement.ux;
+    u_y = solution.Displacement.uy;
+    u_z = solution.Displacement.uz;
+    columns = {'X', 'Y', 'Z', 'sxx', 'syy', 'szz', 'sxy', 'syz', 'sxz', 'u_x', 'u_y', 'u_z'};
+    results_table = table(...
+        x, y, z, sxx, syy, szz, sxy, syz, sxz, u_x, u_y, u_z, 'VariableNames', columns);
+    % columns = {'X', 'Y', 'Z', 'u_x', 'u_y', 'u_z'};
+    % results_table = table(x, y, z, u_x, u_y, u_z, 'VariableNames', columns);
 end
 
 

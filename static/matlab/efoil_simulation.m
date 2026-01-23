@@ -141,7 +141,7 @@ classdef efoil_simulation
         end
 
 
-        function model = SetRealBC(model, wing_span, tip_force)
+        function model = SetRealBC(model, wing_span)
             [~, face_centers] = efoil_simulation.GetVertexCoordAndFaceCenters(model);
             
             % find mast root face (fixed relatively from the efoil board)
@@ -152,9 +152,16 @@ classdef efoil_simulation
         
             % add gravity
             model.FaceLoad = faceLoad(Gravity=[0; 0; -9.81]);
+        end
 
-            % apply force to the tip of the wing
-            model = efoil_simulation.ApplyTipForce(model, wing_span, tip_force);
+
+        function model = ApplyCFDForces(model, cfd_forces)
+            model.FaceLoad = faceLoad(Gravity=[0; 0; -9.81]);
+            for i = 1:size(cfd_forces, 1)
+                face_id = cfd_forces(i, 1);
+                force = cfd_forces(i, 2:4);
+                model.FaceLoad(face_id) = faceLoad("SurfaceTraction", force);
+            end
         end
     end
 end

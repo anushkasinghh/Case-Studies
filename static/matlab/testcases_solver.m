@@ -14,7 +14,7 @@ do_visualization = false;
 hmin_ratio = 1.0;            % not adaptive meshing
 geometric_order = 'linear';  % mesh gen with linear geom order
 
-mesh_grid = [0.014 0.013 0.0083 0.007 0.0058 0.0051 0.004];
+mesh_grid = [0.014 0.013 0.0083 0.007 0.0058 0.0051 0.004];  % adjusted sizes to make roughly the same number of nodes as are in ANSYS
 mesh_labels = ["0.02" "0.015" "0.01" "0.007" "0.006" "0.005" "0.004"]; % LABELS FROM ANSYS
 for naca_shape = naca_shapes
     % gen shape
@@ -48,11 +48,20 @@ function results_table = GetResultsTable(solution)
     x = solution.Mesh.Nodes(1, :).';
     y = solution.Mesh.Nodes(2, :).';
     z = solution.Mesh.Nodes(3, :).';
+
     u_x = solution.Displacement.ux;
     u_y = solution.Displacement.uy;
     u_z = solution.Displacement.uz;
-    columns = {'X', 'Y', 'Z', 'u_x', 'u_y', 'u_z'};
-    results_table = table(x, y, z, u_x, u_y, u_z, 'VariableNames', columns);
+
+    sxx = solution.Stress.sxx;
+    syy = solution.Stress.syy;
+    szz = solution.Stress.szz;
+    sxy = solution.Stress.sxy;
+    sxz = solution.Stress.sxz;
+    syz = solution.Stress.syz;
+
+    columns = {'X', 'Y', 'Z', 'u_x', 'u_y', 'u_z', 'sxx', 'syy', 'szz', 'sxy', 'sxz', 'syz'};
+    results_table = table(x, y, z, u_x, u_y, u_z, sxx, syy, szz, sxy, sxz, syz, 'VariableNames', columns);
 end
 
 

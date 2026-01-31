@@ -4,7 +4,6 @@ EPS = 1e-9;
 
 % current simulation values
 TIP_FORCE = [100; 0; 0];    % force applied to the tip of the wing (N)
-wing_span = 1.0;           % 1m
 
 
 % __main__
@@ -19,7 +18,7 @@ for mesh_size = mesh_grid
     fprintf('Mesh size: %.4f; Geometric order: %s\n', mesh_size, geometric_order);
     model = efoil_simulation.CreatePDEModel(DEFAULT_STL_FILENAME, POISSONS_RATIO, YOUNGS_MODULUS, MASS_DENSITY, do_sub_visualization);
     model = efoil_simulation.GenerateMesh(model, mesh_size, 1.0, geometric_order, do_sub_visualization);
-    model = efoil_simulation.SetDefaultTestConditions(model, wing_span, TIP_FORCE);
+    model = efoil_simulation.SetDefaultTestConditions(model, WING_SPAN, TIP_FORCE);
    
     fprintf('Solving linear elasticity equation\n');
     solution = solve(model);

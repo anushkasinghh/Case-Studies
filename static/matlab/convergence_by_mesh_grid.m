@@ -11,7 +11,7 @@ do_sub_visualization = false;
 do_print_values = false;
 mesh_grid = [0.1 0.07 0.05 0.04 0.03 0.02 0.015 0.01 0.0085 0.0075];
 mesh_labels = ["0.1" "0.07" "0.05" "0.04" "0.03" "0.02" "0.015" "0.01" "0.0085" "0.0075"];
-geometric_order = "quadratic";
+geometric_order = "linear";
 solutions = [];
 
 for mesh_size = mesh_grid
